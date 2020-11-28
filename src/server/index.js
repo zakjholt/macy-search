@@ -1,16 +1,13 @@
 const express = require("express");
 const path = require("path");
-const elasticsearch = require("elasticsearch");
 
-const elastic = new elasticsearch.Client({
-  host: "localhost:9200",
-  log: "trace",
-});
+const { client, ELASTICSEARCH_INDEX } = require("../db/elasticsearch");
 
 const searchRecords = async (query) => {
-  const response = await elastic.search({
-    index: "recipe_pdfs",
+  const response = await client.search({
+    index: ELASTICSEARCH_INDEX,
     q: `text:${query}`,
+    analyzer: "keyword",
   });
 
   return response.hits.hits;
@@ -36,5 +33,5 @@ app.get("/api/drinks", async (req, res) => {
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+  console.log(`App listening on ${port}`);
 });

@@ -1,12 +1,11 @@
 const uniq = require("lodash/uniq");
 const identity = require("lodash/identity");
-const fs = require("fs");
+// const fs = require("fs");
 const pdf = require("pdf-parse");
-const elasticsearch = require("elasticsearch");
+const { client, ELASTICSEARCH_INDEX } = require("../db/elasticsearch");
 
 const { loadIndex } = require("./page_loads");
 const { loadRecipe } = require("./page_loads/recipe");
-const prompts = require("prompts");
 
 const HREF_BLACKLIST = ["https://www.tommacy.com/recipes"];
 const extractLinkHref = (index, recipePage) => {
@@ -48,11 +47,12 @@ const fetchPdfLinks = async () => {
     }
   }
 
-  fs.writeFileSync("pdfLinks.json", JSON.stringify(pdfLinks));
+  // fs.writeFileSync("pdfLinks.json", JSON.stringify(pdfLinks));
+  return pdfLinks;
 };
 
-const buildRecords = async () => {
-  const linkMaps = require("../pdfLinks.json");
+const buildRecords = async (linkMaps) => {
+  // const linkMaps = require("../pdfLinks.json");
 
   const records = [];
   for (let linkMap of linkMaps) {
@@ -72,21 +72,17 @@ const buildRecords = async () => {
     }
   }
 
-  fs.writeFileSync("records.json", JSON.stringify(records));
+  // fs.writeFileSync("records.json", JSON.stringify(records));
+  return records;
 };
 
-const elastic = new elasticsearch.Client({
-  host: "localhost:9200",
-  log: "trace",
-});
-
-const indexRecords = async () => {
-  const records = require("../records.json");
+const indexRecords = async (records) => {
+  // const records = require("../records.json");
 
   for (let record of records) {
     try {
-      await elastic.index({
-        index: "recipe_pdfs",
+      await client.index({
+        index: ELASTICSEARCH_INDEX,
         type: "recipe",
         body: record,
       });
@@ -97,8 +93,21 @@ const indexRecords = async () => {
   }
 };
 
+const main = async () => {
+  // Check to see if the index is already created (if we've already run this indexer)
+  const exists = await client.indices.exists({
+    index: ELASTICSEARCH_INDEX,
+  });
 
+  if (exists) {
+    console.log("Elasticsearch index already exists. No-op");
+    return;
+  } else {
+    const pdfLinks = await fetchPdfLinks();
+    const records = await buildRecords(pdfLinks);
+    await indexRecords(records);
+    console.log("Records indexed");
+  }
+};
 
-// indexRecords();
-// buildRecords();
-// main();
+main();
