@@ -10,4 +10,5 @@ COPY src src
 
 RUN npm run build:app
 
-CMD npm start
+# Sleep 20 seconds to wait for elasticsearch to become reponsive
+CMD sleep 20 && npm start
