@@ -1,0 +1,5 @@
+node_modules
+pdfLinks.json
+records.json
+src/server/public
+.cache
